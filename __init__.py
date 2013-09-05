@@ -9,6 +9,7 @@
 """
 from trytond.pool import Pool
 from .country import Subdivision
+from .party import Party, Address
 from .ebay import SellerAccount, CheckTokenStatusView, CheckTokenStatus
 
 
@@ -16,6 +17,8 @@ def register():
     "Register classes with pool"
     Pool.register(
         Subdivision,
+        Party,
+        Address,
         SellerAccount,
         CheckTokenStatusView,
         module='ebay', type_='model'

@@ -29,22 +29,28 @@ class Subdivision:
         })
 
     @classmethod
-    def search_using_ebay_state_code(cls, code, country):
+    def search_using_ebay_state(cls, value, country):
         """
-        Searches for state with given ebay StateOrProvince code.
+        Searches for state with given ebay StateOrProvince value.
 
-        :param code: Code of state from ebay
+        :param value: Code or Name of state from ebay
         :param country: Active record of country
         :return: Active record of state if found else raises error
         """
         subdivisions = cls.search([
-            ('code', '=', country.code + '-' + code),
             ('country', '=', country.id),
+            ('code', '=', country.code + '-' + value)
         ])
 
         if not subdivisions:
+            subdivisions = cls.search([
+                ('country', '=', country.id),
+                ('name', 'ilike', value),
+            ], limit=1)
+
+        if not subdivisions:
             return cls.raise_user_error(
-                "state_not_found", error_args=(code, country.name)
+                "state_not_found", error_args=(value, country.name)
             )
 
         return subdivisions[0]
