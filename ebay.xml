@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+        This file is part of Tryton. The COPYRIGHT file at the
+        top level of this repository contains the full copyright notices
+        and license terms.
+    -->
+<tryton>
+    <data>
+
+        <record model="ir.ui.view" id="ebay_seller_account_view_form">
+            <field name="model">ebay.seller.account</field>
+            <field name="type">form</field>
+            <field name="arch" type="xml">
+                <![CDATA[
+                    <form string="eBay Seller Account">
+                        <label name="name" />
+                        <field name="name" />
+                        <label name="company" />
+                        <field name="company" />
+                        <separator id="details" string="Account Details" colspan="4"/>
+                        <label name="app_id" />
+                        <field name="app_id" />
+                        <label name="dev_id" />
+                        <field name="dev_id" />
+                        <label name="cert_id" />
+                        <field name="cert_id" />
+                        <newline/>
+                        <label name="token" />
+                        <field name="token" colspan="3" />
+                    </form>
+                ]]>
+            </field>
+        </record>
+        <record model="ir.ui.view" id="ebay_seller_account_view_tree">
+            <field name="model">ebay.seller.account</field>
+            <field name="type">tree</field>
+            <field name="arch" type="xml">
+                <![CDATA[
+                    <tree string="eBay Seller Accounts">
+                        <field name="name" />
+                        <field name="company" />
+                        <field name="app_id" />
+                    </tree>
+                ]]>
+            </field>
+        </record>
+
+        <record model="ir.action.act_window" id="act_ebay_seller_account_form">
+            <field name="name">eBay Seller Accounts</field>
+            <field name="res_model">ebay.seller.account</field>
+        </record>
+        <record model="ir.action.act_window.view"
+                id="act_ebay_seller_account_view1">
+            <field name="sequence" eval="20"/>
+            <field name="view" ref="ebay_seller_account_view_form"/>
+            <field name="act_window" ref="act_ebay_seller_account_form"/>
+        </record>
+        <record model="ir.action.act_window.view"
+                id="act_ebay_seller_account_view2">
+            <field name="sequence" eval="10"/>
+            <field name="view" ref="ebay_seller_account_view_tree"/>
+            <field name="act_window" ref="act_ebay_seller_account_form"/>
+        </record>
+        <menuitem id="ebay" sequence="50" name="eBay"/>
+        <menuitem parent="ebay"
+            action="act_ebay_seller_account_form"
+            id="menu_ebay_seller_account"
+            sequence="0" icon="tryton-list"/>
+
+    </data>
+</tryton>
