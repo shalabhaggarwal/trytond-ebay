@@ -9,11 +9,13 @@
 """
 from trytond.pool import Pool
 from .ebay import SellerAccount
+from .country import Subdivision
 
 
 def register():
     "Register classes with pool"
     Pool.register(
+        Subdivision,
         SellerAccount,
         module='ebay', type_='model'
     )
