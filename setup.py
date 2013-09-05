@@ -21,7 +21,9 @@ major_version, minor_version, _ = info.get('version', '0.0.1').split('.', 2)
 major_version = int(major_version)
 minor_version = int(minor_version)
 
-requires = []
+requires = [
+    'ebaysdk',
+]
 for dep in info.get('depends', []):
     if not re.match(r'(ir|res|webdav)(\W|$)', dep):
         requires.append('trytond_%s >= %s.%s, < %s.%s' % (
@@ -45,7 +47,9 @@ setup(
         'trytond.modules.ebay.tests',
     ],
     package_data={
-        'trytond.modules.ebay': info.get('xml', []) + ['tryton.cfg'],
+        'trytond.modules.ebay': info.get('xml', []) + [
+            'tryton.cfg', 'view/*.xml'
+        ],
     },
     classifiers=[
         'Development Status :: 4 - Beta',

@@ -8,8 +8,8 @@
     :license: GPLv3, see LICENSE for more details.
 """
 from trytond.pool import Pool
-from .ebay import SellerAccount
 from .country import Subdivision
+from .ebay import SellerAccount, CheckTokenStatusView, CheckTokenStatus
 
 
 def register():
@@ -17,5 +17,10 @@ def register():
     Pool.register(
         Subdivision,
         SellerAccount,
+        CheckTokenStatusView,
         module='ebay', type_='model'
+    )
+    Pool.register(
+        CheckTokenStatus,
+        module='ebay', type_='wizard'
     )
