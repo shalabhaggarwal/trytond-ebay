@@ -17,16 +17,22 @@
                         <field name="name" />
                         <label name="company" />
                         <field name="company" />
-                        <separator id="details" string="Account Details" colspan="4"/>
-                        <label name="app_id" />
-                        <field name="app_id" />
-                        <label name="dev_id" />
-                        <field name="dev_id" />
-                        <label name="cert_id" />
-                        <field name="cert_id" />
-                        <newline/>
-                        <label name="token" />
-                        <field name="token" colspan="3" />
+                        <notebook>
+                            <page string="Account Details" id="details">
+                                <label name="app_id" />
+                                <field name="app_id" />
+                                <label name="dev_id" />
+                                <field name="dev_id" />
+                                <label name="cert_id" />
+                                <field name="cert_id" />
+                                <label name="is_sandbox" />
+                                <field name="is_sandbox" />
+                                <newline/>
+                                <label name="token" />
+                                <field name="token" colspan="3" />
+                            </page>
+                        </notebook>
+                        <button string="Check Token Status" name="check_token_status" colspan="2"/>
                     </form>
                 ]]>
             </field>
@@ -66,6 +72,19 @@
             action="act_ebay_seller_account_form"
             id="menu_ebay_seller_account"
             sequence="0" icon="tryton-list"/>
+
+        <!--Check Token Status Wizard-->
+        <record model="ir.action.wizard" id="check_token_status">
+            <field name="name">Check Token Status</field>
+            <field name="wiz_name">ebay.check_token_status</field>
+            <field name="model">ebay.seller.account</field>
+        </record>
+
+        <record model="ir.ui.view" id="check_token_status_view_form">
+            <field name="model">ebay.check_token_status.view</field>
+            <field name="type">form</field>
+            <field name="name">wizard_check_token_status_view_form</field>
+        </record>
 
     </data>
 </tryton>
