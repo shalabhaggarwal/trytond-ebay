@@ -5,7 +5,7 @@
     Tests party
 
     :copyright: (c) 2013 by Openlabs Technologies & Consulting (P) Limited
-    :license: BSD, see LICENSE for more details.
+    :license: GPLv3, see LICENSE for more details.
 """
 import os
 import sys

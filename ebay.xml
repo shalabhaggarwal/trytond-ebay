@@ -31,6 +31,14 @@
                                 <label name="token" />
                                 <field name="token" colspan="3" />
                             </page>
+                            <page string="Other Settings" id="settings">
+                                <label name="default_account_expense" />
+                                <field name="default_account_expense" />
+                                <label name="default_account_revenue" />
+                                <field name="default_account_revenue" />
+                                <label name="default_uom" />
+                                <field name="default_uom" />
+                            </page>
                         </notebook>
                         <button string="Check Token Status" name="check_token_status" colspan="2"/>
                     </form>

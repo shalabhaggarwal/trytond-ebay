@@ -12,6 +12,7 @@ from trytond.transaction import Transaction
 from trytond.wizard import Wizard, StateView, Button
 from trytond.model import ModelSQL, ModelView, fields
 from trytond.pool import Pool
+from trytond.pyson import Eval
 
 
 __all__ = ['SellerAccount', 'CheckTokenStatusView', 'CheckTokenStatus']
@@ -53,6 +54,33 @@ class SellerAccount(ModelSQL, ModelView):
         'Is sandbox ?',
         help="Select this if this account is a sandbox account",
     )
+
+    default_uom = fields.Many2One(
+        'product.uom', 'Default Product UOM', required=True
+    )
+
+    default_account_expense = fields.Property(fields.Many2One(
+        'account.account', 'Account Expense', domain=[
+            ('kind', '=', 'expense'),
+            ('company', '=', Eval('company')),
+        ], depends=['company'], required=True
+    ))
+
+    default_account_revenue = fields.Property(fields.Many2One(
+        'account.account', 'Account Revenue', domain=[
+            ('kind', '=', 'revenue'),
+            ('company', '=', Eval('company')),
+        ], depends=['company'], required=True
+    ))
+
+    @staticmethod
+    def default_default_uom():
+        UoM = Pool().get('product.uom')
+
+        unit = UoM.search([
+            ('name', '=', 'Unit'),
+        ])
+        return unit and unit[0] or None
 
     @classmethod
     def __setup__(cls):
