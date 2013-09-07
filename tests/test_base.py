@@ -199,6 +199,13 @@ class TestBase(unittest.TestCase):
             'type': 'state',
         }])
 
+        self.subdivision_wa, = self.Subdivision.create([{
+            'name': 'Washington',
+            'code': 'US-WA',
+            'country': self.country_us.id,
+            'type': 'state',
+        }])
+
         self.subdivision_up, = self.Subdivision.create([{
             'name': 'Uttar Pradesh',
             'code': 'IN-UP',
