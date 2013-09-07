@@ -5,11 +5,43 @@
     :copyright: (c) 2013 by Openlabs Technologies & Consulting (P) Limited
     :license: GPLv3, see LICENSE for more details.
 """
+import os
+import json
 import unittest
 
 import trytond.tests.test_tryton
 from trytond.tests.test_tryton import POOL, USER
 from trytond.transaction import Transaction
+
+
+ROOT_JSON_FOLDER = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), 'json'
+)
+
+
+def load_json(resource, filename):
+    """Reads the json file from the filesystem and returns the json loaded as
+    python objects
+
+    On filesystem, the files are kept in this format:
+        json----
+              |
+            resource----
+                       |
+                       filename
+
+    :param resource: The ebay resource for which the file has to be
+                     fetched. It is same as the folder name in which the files
+                     are kept.
+    :param filename: The name of the file to be fethced without `.json`
+                     extension.
+    :returns: Loaded json from the contents of the file read.
+    """
+    file_path = os.path.join(
+        ROOT_JSON_FOLDER, resource, str(filename)
+    ) + '.json'
+
+    return json.loads(open(file_path).read())
 
 
 class TestBase(unittest.TestCase):

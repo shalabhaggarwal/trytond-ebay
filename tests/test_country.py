@@ -31,7 +31,7 @@ class TestCountry(TestBase):
     Tests country
     """
 
-    def test_0010_search_state_with_valid_region(self):
+    def test_0010_search_state_with_valid_code(self):
         """
         Tests if state can be searched using ebay region
         """
@@ -46,7 +46,26 @@ class TestCountry(TestBase):
             ])
 
             self.assertEqual(
-                self.Subdivision.search_using_ebay_state_code('FL', country),
+                self.Subdivision.search_using_ebay_state('FL', country),
+                subdivision
+            )
+
+    def test_0015_search_state_with_valid_name(self):
+        """
+        Tests if state can be searched using ebay region
+        """
+        with Transaction().start(DB_NAME, USER, CONTEXT):
+            self.setup_defaults()
+
+            country, = self.Country.search([
+                ('code', '=', 'US')
+            ])
+            subdivision, = self.Subdivision.search([
+                ('code', '=', 'US-FL')
+            ])
+
+            self.assertEqual(
+                self.Subdivision.search_using_ebay_state('FlorIda', country),
                 subdivision
             )
 
@@ -72,7 +91,7 @@ class TestCountry(TestBase):
 
             self.assertRaises(
                 UserError,
-                self.Subdivision.search_using_ebay_state_code, code, country
+                self.Subdivision.search_using_ebay_state, code, country
             )
 
 
