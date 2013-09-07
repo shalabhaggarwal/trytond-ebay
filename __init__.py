@@ -10,6 +10,7 @@
 from trytond.pool import Pool
 from .country import Subdivision
 from .party import Party, Address
+from .product import Product
 from .ebay import SellerAccount, CheckTokenStatusView, CheckTokenStatus
 
 
@@ -20,6 +21,7 @@ def register():
         Party,
         Address,
         SellerAccount,
+        Product,
         CheckTokenStatusView,
         module='ebay', type_='model'
     )
