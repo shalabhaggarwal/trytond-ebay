@@ -52,13 +52,19 @@ class Party:
             self.raise_user_error('invalid_party', (self.ebay_user_id,))
 
     @classmethod
-    def find_or_create_using_ebay_id(cls, ebay_user_id):
+    def find_or_create_using_ebay_id(cls, ebay_user_id, item_id=None):
         """
         This method tries to find the party with the ebay ID first and
         if not found it will fetch the info from ebay and create a new
         party with the data from ebay using create_using_ebay_data
 
-        :param ebay_id: User ID sent by ebay
+        :param ebay_user_id: User ID sent by ebay
+        :param item_id: This is needed when there is a relationship between
+            the buyer and seller. eBay has security which allows a seller
+            to fetch the information of a buyer via API only when there is
+            a seller-buyer relationship between both via some item.
+            If this item is not passed, then ebay would not return important
+            informations like eMail etc.
         :return: Active record of record created/found
         """
         SellerAccount = Pool().get('ebay.seller.account')
@@ -76,9 +82,10 @@ class Party:
 
         api = seller_account.get_trading_api()
 
-        user_data = api.execute(
-            'GetUser', {'UserID': ebay_user_id, 'DetailLevel': 'ReturnAll'}
-        ).response_dict()
+        filters = {'UserID': ebay_user_id}
+        if item_id:
+            filters['ItemID'] = item_id
+        user_data = api.execute('GetUser', filters).response_dict()
 
         return cls.create_using_ebay_data(user_data)
 
@@ -88,10 +95,18 @@ class Party:
         Creates record of customer values sent by ebay
 
         :param ebay_data: Dictionary of values for customer sent by ebay
+                          Ref: http://developer.ebay.com/DevZone/XML/docs/\
+                                  Reference/eBay/GetUser.html#Response
         :return: Active record of record created
         """
         party, = cls.create([{
-            'name': ebay_data['User']['RegistrationAddress']['Name']['value'],
+            # eBay wont expose the name of the buyer to the seller.
+            # What we get is the name in the shipping address in the sale order
+            # and that we have no way to be sure if that is the address and
+            # name of buyer or someone else.
+            # Hence, we use UserID for both name and ebay_user_id.
+            # This allows the user a flexibility to edit the name later
+            'name': ebay_data['User']['UserID']['value'],
             'ebay_user_id': ebay_data['User']['UserID']['value'],
             'contact_mechanisms': [
                 ('create', [{
@@ -114,6 +129,8 @@ class Address:
         and country. For any deviation in any field, returns False.
 
         :param address_data: Dictionary of address data from ebay
+                             Ref: http://developer.ebay.com/DevZone/XML/docs/\
+                                     Reference/eBay/GetUser.html#Response
         :return: True if address matches else False
         """
         Country = Pool().get('country.country')
@@ -129,7 +146,11 @@ class Address:
 
         return all([
             self.name == address_data['Name']['value'],
-            self.street == address_data['Street']['value'],
+            self.street == address_data['Street1']['value'],
+            self.streetbis == (
+                address_data.get('Street2') and
+                address_data['Street2'].get('value') or None
+            ),
             self.zip == address_data['PostalCode']['value'],
             self.city == address_data['CityName']['value'],
             self.country == country,
@@ -181,7 +202,11 @@ class Address:
         address, = cls.create([{
             'party': party.id,
             'name': address_data['Name']['value'],
-            'street': address_data['Street']['value'],
+            'street': address_data['Street1']['value'],
+            'streetbis': (
+                address_data.get('Street2') and
+                address_data['Street2'].get('value') or None
+            ),
             'zip': address_data['PostalCode']['value'],
             'city': address_data['CityName']['value'],
             'country': country.id,

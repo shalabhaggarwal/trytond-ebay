@@ -41,10 +41,6 @@ class TestParty(TestBase):
 
             ebay_data = load_json('users', 'testuser_shalabhaggarwal')
 
-            customer_name = ebay_data['User'][
-                'RegistrationAddress'
-            ]['Name']['value']
-
             parties = self.Party.search([])
             self.assertEqual(len(parties), 1)
 
@@ -54,7 +50,7 @@ class TestParty(TestBase):
 
             self.assertTrue(
                 self.Party.search([
-                    ('name', '=', customer_name)
+                    ('name', '=', 'testuser_shalabhaggarwal')
                 ])
             )
             parties = self.Party.search([])

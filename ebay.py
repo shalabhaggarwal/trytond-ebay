@@ -73,6 +73,8 @@ class SellerAccount(ModelSQL, ModelView):
         ], depends=['company'], required=True
     ))
 
+    last_order_import_time = fields.DateTime('Last Order Import Time')
+
     @staticmethod
     def default_default_uom():
         UoM = Pool().get('product.uom')
