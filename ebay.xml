@@ -45,6 +45,8 @@
                             </page>
                         </notebook>
                         <button string="Check Token Status" name="check_token_status" colspan="2"/>
+                        <button string="Import Orders" name="import_orders"
+                            colspan="2"/>
                     </form>
                 ]]>
             </field>
@@ -96,6 +98,19 @@
             <field name="model">ebay.check_token_status.view</field>
             <field name="type">form</field>
             <field name="name">wizard_check_token_status_view_form</field>
+        </record>
+
+        <!--Import orders wizard-->
+        <record model="ir.action.wizard" id="import_orders">
+            <field name="name">Import Orders</field>
+            <field name="wiz_name">ebay.import_orders</field>
+            <field name="model">ebay.seller.account</field>
+        </record>
+
+        <record model="ir.ui.view" id="import_orders_view_form">
+            <field name="model">ebay.import_orders.view</field>
+            <field name="type">form</field>
+            <field name="name">wizard_import_orders_view_form</field>
         </record>
 
     </data>

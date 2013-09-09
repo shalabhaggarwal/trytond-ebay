@@ -6,16 +6,21 @@
     :license: GPLv3, see LICENSE for more details.
 """
 import dateutil.parser
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
 
 from ebaysdk import trading
 from trytond.transaction import Transaction
-from trytond.wizard import Wizard, StateView, Button
+from trytond.wizard import Wizard, StateView, Button, StateAction
 from trytond.model import ModelSQL, ModelView, fields
 from trytond.pool import Pool
-from trytond.pyson import Eval
+from trytond.pyson import Eval, PYSONEncoder
 
 
-__all__ = ['SellerAccount', 'CheckTokenStatusView', 'CheckTokenStatus']
+__all__ = [
+    'SellerAccount', 'CheckTokenStatusView', 'CheckTokenStatus',
+    'ImportOrders', 'ImportOrdersView'
+]
 
 
 class SellerAccount(ModelSQL, ModelView):
@@ -73,7 +78,16 @@ class SellerAccount(ModelSQL, ModelView):
         ], depends=['company'], required=True
     ))
 
-    last_order_import_time = fields.DateTime('Last Order Import Time')
+    last_order_import_time = fields.DateTime(
+        'Last Order Import Time', required=True
+    )
+
+    @staticmethod
+    def default_last_order_import_time():
+        """
+        Set default last order import time
+        """
+        return datetime.utcnow() - relativedelta(day=30)
 
     @staticmethod
     def default_default_uom():
@@ -99,6 +113,7 @@ class SellerAccount(ModelSQL, ModelView):
         ]
         cls._buttons.update({
             'check_token_status': {},
+            'import_orders': {},
         })
 
     def get_trading_api(self):
@@ -120,6 +135,16 @@ class SellerAccount(ModelSQL, ModelView):
     def check_token_status(cls, accounts):
         """
         Check the status of token and display to user
+
+        :param accounts: Active record list of seller accounts
+        """
+        pass
+
+    @classmethod
+    @ModelView.button_action('ebay.import_orders')
+    def import_orders(cls, accounts):
+        """
+        Import orders for current account
 
         :param accounts: Active record list of seller accounts
         """
@@ -168,3 +193,83 @@ class CheckTokenStatus(Wizard):
                 response['TokenStatus']['ExpirationTime']['value']
             ),
         }
+
+
+class ImportOrdersView(ModelView):
+    "Import Orders View"
+    __name__ = 'ebay.import_orders.view'
+
+    message = fields.Text("Message", readonly=True)
+
+
+class ImportOrders(Wizard):
+    """
+    Import Orders Wizard
+
+    Import orders for the current seller account
+    """
+    __name__ = 'ebay.import_orders'
+
+    start = StateView(
+        'ebay.import_orders.view',
+        'ebay.import_orders_view_form',
+        [
+            Button('Cancel', 'end', 'tryton-cancel'),
+            Button('Continue', 'import_', 'tryton-ok', default=True),
+        ]
+    )
+
+    import_ = StateAction('sale.act_sale_form')
+
+    def default_start(self, data):
+        """
+        Sets default data for wizard
+        """
+        return {
+            'message': 'This wizard will import orders for this seller ' +
+                'account. It imports orders updated after Last Order ' +
+                'Import Time.'
+        }
+
+    def do_import_(self, action):
+        """Handles the transition"""
+
+        SellerAccount = Pool().get('ebay.seller.account')
+        Sale = Pool().get('sale.sale')
+
+        sales = []
+        account = SellerAccount(Transaction().context.get('active_id'))
+
+        api = account.get_trading_api()
+        now = datetime.now()
+
+        response = api.execute(
+            'GetOrders', {
+                'CreateTimeFrom': account.last_order_import_time,
+                'CreateTimeTo': now
+            }
+        ).response_dict()
+
+        # Orders are returned as dictionary for single order and as
+        # list for multiple orders.
+        # Convert to list if dictionary is returned
+        if isinstance(response['OrderArray']['Order'], dict):
+            orders = [response['OrderArray']['Order']]
+        else:
+            orders = response['OrderArray']['Order']
+
+        with Transaction().set_context(
+            {'ebay_seller_account': account.id}
+        ):
+            self.write([account], {'last_order_import_time': now})
+
+            for order_data in orders:
+                sales.append(Sale.create_using_ebay_data(order_data))
+
+        action['pyson_domain'] = PYSONEncoder().encode([
+            ('id', 'in', map(int, sales))
+        ])
+        return action, {}
+
+    def transition_import_(self):
+        return 'end'
