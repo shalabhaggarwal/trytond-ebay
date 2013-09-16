@@ -27,6 +27,8 @@
                                 <field name="cert_id" />
                                 <label name="is_sandbox" />
                                 <field name="is_sandbox" />
+                                <label name="listing_country" />
+                                <field name="listing_country" />
                                 <newline/>
                                 <label name="token" />
                                 <field name="token" colspan="3" />
@@ -38,15 +40,21 @@
                                 <field name="default_account_revenue" />
                                 <label name="default_uom" />
                                 <field name="default_uom" />
+                                <label name="paypal_email_address"/>
+                                <field name="paypal_email_address"/>
                                 <newline/>
                                 <separator string="Order Settings" id="order_settings" colspan="4"/>
                                 <label name="last_order_import_time"/>
                                 <field name="last_order_import_time"/>
                             </page>
                         </notebook>
-                        <button string="Check Token Status" name="check_token_status" colspan="2"/>
+                        <button string="Check Token Status" name="check_token_status" colspan="4"/>
                         <button string="Import Orders" name="import_orders"
-                            colspan="2"/>
+                                colspan="2"/>
+                        <button string="Export Inventory Status" name="export_catalog_inventory"
+                                colspan="2"/>
+                        <button string="Export Catalog" name="export_catalog"
+                                colspan="2"/>
                     </form>
                 ]]>
             </field>
@@ -111,6 +119,53 @@
             <field name="model">ebay.import_orders.view</field>
             <field name="type">form</field>
             <field name="name">wizard_import_orders_view_form</field>
+        </record>
+
+        <!--Export Inventory wizard-->
+        <record model="ir.action.wizard" id="export_catalog_inventory">
+            <field name="name">Export Inventory Status</field>
+            <field name="wiz_name">ebay.export_catalog_inventory</field>
+            <field name="model">ebay.seller.account</field>
+        </record>
+        <record model="ir.ui.view" id="export_catalog_inventory_start">
+            <field name="model">ebay.export_catalog_inventory.start</field>
+            <field name="type">form</field>
+            <field name="name">wizard_export_catalog_inventory_start_form</field>
+        </record>
+        <record model="ir.ui.view" id="export_catalog_inventory_done">
+            <field name="model">ebay.export_catalog_inventory.done</field>
+            <field name="type">form</field>
+            <field name="name">wizard_export_catalog_inventory_done_form</field>
+        </record>
+
+        <!--Export Catalog wizard-->
+        <record model="ir.action.wizard" id="export_catalog">
+            <field name="name">Export Catalog</field>
+            <field name="wiz_name">ebay.export_catalog</field>
+            <field name="model">ebay.seller.account</field>
+        </record>
+        <record model="ir.ui.view" id="export_catalog_start">
+            <field name="model">ebay.export_catalog.start</field>
+            <field name="type">form</field>
+            <field name="name">wizard_export_catalog_start_form</field>
+        </record>
+        <record model="ir.ui.view" id="export_catalog_done">
+            <field name="model">ebay.export_catalog.done</field>
+            <field name="type">form</field>
+            <field name="name">wizard_export_catalog_done_form</field>
+        </record>
+
+        <!-- Cron To Import Sale Orders-->
+        <record model="ir.cron" id="ir_cron_import_ebay_sale_orders">
+            <field name="name">Import Sales from eBay</field>
+            <field name="request_user" ref="res.user_admin"/>
+            <field name="user" ref="res.user_trigger"/>
+            <field name="active" eval="True"/>
+            <field name="interval_number">1</field>
+            <field name="interval_type">days</field>
+            <field name="number_calls">-1</field>
+            <field name="model">ebay.seller.account</field>
+            <field name="function">import_orders_cron</field>
         </record>
 
     </data>

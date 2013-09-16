@@ -1,0 +1,42 @@
+<?xml version="1.0"?>
+<!-- This file is part of Tryton. The COPYRIGHT file at the top level of
+this repository contains the full copyright notices and license terms. -->
+<data>
+<xpath expr="/form/notebook/page[@id='general']/field[@name='cost_price_method']"
+        position="after">
+        <label name="ebay_exportable"/>
+        <field name="ebay_exportable"/>
+    </xpath>
+    
+    <xpath expr="/form/notebook/page[@id='general']" position="after">
+        <page string="eBay" id="ebay"
+                states="{'invisible': Not(Bool(Eval('ebay_exportable')))}">
+            <label name="ebay_category_id"/>
+            <field name="ebay_category_id"/>
+            <label name="ebay_max_dispatch_time"/>
+            <field name="ebay_max_dispatch_time"/>
+            <label name="ebay_listing_duration"/>
+            <field name="ebay_listing_duration"/>
+            <newline/>
+            <separator string="Refund Policy" id="refund_policy" colspan="6"/>
+            <label name="ebay_return_policy_option"/>
+            <field name="ebay_return_policy_option"/>
+            <label name="ebay_refund_option"/>
+            <field name="ebay_refund_option"/>
+            <label name="ebay_returns_within_option"/>
+            <field name="ebay_returns_within_option"/>
+            <label name="ebay_refund_description"/>
+            <field name="ebay_refund_description"/>
+            <label name="ebay_refund_shipping_cost_paid_by_option"/>
+            <field name="ebay_refund_shipping_cost_paid_by_option"/>
+            <newline/>
+            <separator string="Shipping Policy" id="shipping_policy" colspan="6"/>
+            <label name="ebay_shipping_type"/>
+            <field name="ebay_shipping_type"/>
+            <label name="ebay_shipping_service"/>
+            <field name="ebay_shipping_service"/>
+            <label name="ebay_shipping_cost"/>
+            <field name="ebay_shipping_cost"/>
+        </page>
+    </xpath>
+</data>

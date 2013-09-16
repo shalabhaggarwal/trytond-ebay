@@ -137,12 +137,16 @@ class Address:
         Subdivision = Pool().get('country.subdivision')
 
         # Find country and subdivision based on ebay data
-        country, = Country.search([
-            ('code', '=', address_data['Country']['value'])
-        ], limit=1)
-        subdivision = Subdivision.search_using_ebay_state(
-            address_data['StateOrProvince']['value'], country
-        )
+        country = None
+        subdivision = None
+        if address_data['Country']:
+            country, = Country.search([
+                ('code', '=', address_data['Country']['value'])
+            ], limit=1)
+        if address_data['Country'] and address_data['StateOrProvince']:
+            subdivision = Subdivision.search_using_ebay_state(
+                address_data['StateOrProvince']['value'], country
+            )
 
         return all([
             self.name == address_data['Name']['value'],
@@ -214,15 +218,16 @@ class Address:
         }])
 
         # Create phone as contact mechanism
-        if not ContactMechanism.search([
-            ('party', '=', party.id),
-            ('type', 'in', ['phone', 'mobile']),
-            ('value', '=', address_data['Phone']['value']),
-        ]):
-            ContactMechanism.create([{
-                'party': party.id,
-                'type': 'phone',
-                'value': address_data['Phone']['value'],
-            }])
+        if address_data['Phone']:
+            if not ContactMechanism.search([
+                ('party', '=', party.id),
+                ('type', 'in', ['phone', 'mobile']),
+                ('value', '=', address_data['Phone']['value']),
+            ]):
+                ContactMechanism.create([{
+                    'party': party.id,
+                    'type': 'phone',
+                    'value': address_data['Phone']['value'],
+                }])
 
         return address

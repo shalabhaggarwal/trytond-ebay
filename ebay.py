@@ -11,7 +11,9 @@ from dateutil.relativedelta import relativedelta
 
 from ebaysdk import trading
 from trytond.transaction import Transaction
-from trytond.wizard import Wizard, StateView, Button, StateAction
+from trytond.wizard import (
+    Wizard, StateView, Button, StateAction, StateTransition
+)
 from trytond.model import ModelSQL, ModelView, fields
 from trytond.pool import Pool
 from trytond.pyson import Eval, PYSONEncoder
@@ -19,7 +21,9 @@ from trytond.pyson import Eval, PYSONEncoder
 
 __all__ = [
     'SellerAccount', 'CheckTokenStatusView', 'CheckTokenStatus',
-    'ImportOrders', 'ImportOrdersView'
+    'ImportOrders', 'ImportOrdersView', 'ExportCatalogInventoryStart',
+    'ExportCatalogInventoryDone', 'ExportCatalogInventory',
+    'ExportCatalogStart', 'ExportCatalogDone', 'ExportCatalog'
 ]
 
 
@@ -54,6 +58,9 @@ class SellerAccount(ModelSQL, ModelView):
         help="Token for this user account - to be generated from eBay "
         "developer home. If it expirees, then a new one should be generated",
     )
+    listing_country = fields.Many2One(
+        'country.country', 'Listing Country', required=True
+    )
 
     is_sandbox = fields.Boolean(
         'Is sandbox ?',
@@ -80,6 +87,10 @@ class SellerAccount(ModelSQL, ModelView):
 
     last_order_import_time = fields.DateTime(
         'Last Order Import Time', required=True
+    )
+
+    paypal_email_address = fields.Char(
+        'PayPal Email Address'
     )
 
     @staticmethod
@@ -114,6 +125,8 @@ class SellerAccount(ModelSQL, ModelView):
         cls._buttons.update({
             'check_token_status': {},
             'import_orders': {},
+            'export_catalog_inventory': {},
+            'export_catalog': {},
         })
 
     def get_trading_api(self):
@@ -141,10 +154,79 @@ class SellerAccount(ModelSQL, ModelView):
         pass
 
     @classmethod
+    def import_orders_cron(cls, accounts=None):
+        "This method imports orders on call by cron"
+        if not accounts:
+            accounts = cls.search([])
+
+        for account in accounts:
+            account.import_orders_for_account()
+
+    def import_orders_for_account(self):
+        """Import orders from current seller account
+        """
+        Sale = Pool().get('sale.sale')
+
+        sales = []
+        api = self.get_trading_api()
+        now = datetime.now()
+
+        response = api.execute(
+            'GetOrders', {
+                'CreateTimeFrom': self.last_order_import_time,
+                'CreateTimeTo': now,
+                'OrderStatus': 'Completed',
+            }
+        ).response_dict()
+
+        if not response['OrderArray']:
+            return sales
+
+        # Orders are returned as dictionary for single order and as
+        # list for multiple orders.
+        # Convert to list if dictionary is returned
+        if isinstance(response['OrderArray']['Order'], dict):
+            orders = [response['OrderArray']['Order']]
+        else:
+            orders = response['OrderArray']['Order']
+
+        with Transaction().set_context(
+            {'ebay_seller_account': self.id}
+        ):
+            self.write([self], {'last_order_import_time': now})
+
+            for order_data in orders:
+                sales.append(Sale.find_or_create_using_ebay_id(
+                    order_data['OrderID']['value']
+                ))
+
+        return sales
+
+    @classmethod
     @ModelView.button_action('ebay.import_orders')
     def import_orders(cls, accounts):
         """
         Import orders for current account
+
+        :param accounts: Active record list of seller accounts
+        """
+        pass
+
+    @classmethod
+    @ModelView.button_action('ebay.export_catalog_inventory')
+    def export_catalog_inventory(cls, accounts):
+        """
+        Export inventory for current account
+
+        :param accounts: Active record list of seller accounts
+        """
+        pass
+
+    @classmethod
+    @ModelView.button_action('ebay.export_catalog')
+    def export_catalog(cls, accounts):
+        """
+        Export selected products for current account
 
         :param accounts: Active record list of seller accounts
         """
@@ -235,36 +317,9 @@ class ImportOrders(Wizard):
         """Handles the transition"""
 
         SellerAccount = Pool().get('ebay.seller.account')
-        Sale = Pool().get('sale.sale')
 
-        sales = []
         account = SellerAccount(Transaction().context.get('active_id'))
-
-        api = account.get_trading_api()
-        now = datetime.now()
-
-        response = api.execute(
-            'GetOrders', {
-                'CreateTimeFrom': account.last_order_import_time,
-                'CreateTimeTo': now
-            }
-        ).response_dict()
-
-        # Orders are returned as dictionary for single order and as
-        # list for multiple orders.
-        # Convert to list if dictionary is returned
-        if isinstance(response['OrderArray']['Order'], dict):
-            orders = [response['OrderArray']['Order']]
-        else:
-            orders = response['OrderArray']['Order']
-
-        with Transaction().set_context(
-            {'ebay_seller_account': account.id}
-        ):
-            self.write([account], {'last_order_import_time': now})
-
-            for order_data in orders:
-                sales.append(Sale.create_using_ebay_data(order_data))
+        sales = account.import_orders_for_account()
 
         action['pyson_domain'] = PYSONEncoder().encode([
             ('id', 'in', map(int, sales))
@@ -273,3 +328,135 @@ class ImportOrders(Wizard):
 
     def transition_import_(self):
         return 'end'
+
+
+class ExportCatalogStart(ModelView):
+    'Export Catalog to eBay View'
+    __name__ = 'ebay.export_catalog.start'
+
+    products = fields.Many2Many(
+        'product.product', None, None, 'Products', required=True,
+        domain=[
+            ('ebay_exportable', '=', True),
+            ('ebay_item_id', '=', Eval(None)),
+        ],
+    )
+
+
+class ExportCatalogDone(ModelView):
+    'Export Catalog to eBay Done View'
+    __name__ = 'ebay.export_catalog.done'
+
+    status = fields.Char('Status', readonly=True)
+
+
+class ExportCatalog(Wizard):
+    '''Export catalog to eBay
+
+    Export the products selected to this ebay account
+    '''
+    __name__ = 'ebay.export_catalog'
+
+    start = StateView(
+        'ebay.export_catalog.start',
+        'ebay.export_catalog_start', [
+            Button('Cancel', 'end', 'tryton-cancel'),
+            Button('Continue', 'export_', 'tryton-ok', default=True),
+        ]
+    )
+    export_ = StateTransition()
+    done = StateView(
+        'ebay.export_catalog.done',
+        'ebay.export_catalog_done', [
+            Button('OK', 'end', 'tryton-cancel'),
+        ]
+    )
+
+    def transition_export_(self):
+        """
+        Export the products selected to this ebay account
+        """
+        SellerAccount = Pool().get('ebay.seller.account')
+        Product = Pool().get('product.product')
+
+        seller_account = SellerAccount(Transaction().context['active_id'])
+
+        if not self.start.products:
+            return 'end'
+
+        with Transaction().set_context({
+            'ebay_seller_account': seller_account.id,
+        }):
+            Product.export_catalog_to_ebay(self.start.products)
+
+        return 'done'
+
+    def default_done(self, fields):
+        "Display confirmation message"
+        return {
+            'status': 'Selected products exported to eBay for listing.',
+        }
+
+
+class ExportCatalogInventoryStart(ModelView):
+    'Export Catalog Inventory to eBay View'
+    __name__ = 'ebay.export_catalog_inventory.start'
+
+
+class ExportCatalogInventoryDone(ModelView):
+    'Export Catalog Inventory to eBay Done View'
+    __name__ = 'ebay.export_catalog_inventory.done'
+
+    status = fields.Char('Status', readonly=True)
+
+
+class ExportCatalogInventory(Wizard):
+    '''Export catalog inventory to eBay
+
+    Export the stock for products selected to this ebay account
+    '''
+    __name__ = 'ebay.export_catalog_inventory'
+
+    start = StateView(
+        'ebay.export_catalog_inventory.start',
+        'ebay.export_catalog_inventory_start', [
+            Button('Cancel', 'end', 'tryton-cancel'),
+            Button('Continue', 'export_', 'tryton-ok', default=True),
+        ]
+    )
+    export_ = StateTransition()
+    done = StateView(
+        'ebay.export_catalog_inventory.done',
+        'ebay.export_catalog_inventory_done', [
+            Button('OK', 'end', 'tryton-cancel'),
+        ]
+    )
+
+    def transition_export_(self):
+        """
+        Export the stock for products selected to this ebay account
+        """
+        SellerAccount = Pool().get('ebay.seller.account')
+        Product = Pool().get('product.product')
+
+        seller_account = SellerAccount(Transaction().context['active_id'])
+
+        products = Product.search([
+            ('ebay_item_id', '!=', None),
+            ('ebay_exportable', '=', True),
+        ])
+        if not products:
+            return 'end'
+
+        with Transaction().set_context({
+            'ebay_seller_account': seller_account.id,
+        }):
+            Product.export_inventory_to_ebay(products)
+
+        return 'done'
+
+    def default_done(self, fields):
+        "Display confirmation message"
+        return {
+            'status': 'Inventory for eBay exportable products exported.',
+        }
